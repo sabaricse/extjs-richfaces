@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--
+Date Created - 1/31/2010
+Author - Arun Shanmugam Kumar 
+blog - http://technodump-arun.blogspot.com/
+-->
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:a4j="http://richfaces.org/a4j"
+      xmlns:rich="http://richfaces.org/rich"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets">
+
+  <head>
+   <link rel="stylesheet" type="text/css" href="ext-3.0.3/ext-3.0.3/resources/css/ext-all.css" />
+   <link rel="stylesheet" type="text/css" href="ext-3.0.3/ext-3.0.3/examples/shared/examples.css" />
+   <link rel="stylesheet" type="text/css" href="ext-3.0.3/ext-3.0.3/examples/grid/grid-examples.css" />
+   <style type="text/css">
+       /* style rows on mouseover */
+       .x-grid3-row-over .x-grid3-cell-inner {
+           font-weight: bold;
+       }
+       
+       .activitycell {
+       		background-color: #FFFFFF;
+       	}
+       
+       .cellhighlight {
+       		background-color: #FAF6AF;
+       	}
+   </style>
+   <script type="text/javascript" src="ext-3.0.3/ext-3.0.3/adapter/ext/ext-base.js"></script>
+   <script type="text/javascript" src="ext-3.0.3/ext-3.0.3/ext-all.js"></script>
+  <script>
+  	// simulating a package like that of Java to avoid namespace collision with 
+  	// other JS libraries
+	var __extJSRichfaces = {};
+
+  	//This will help to maintain the user preference as it was in the last view of the page.
+	Ext.state.Manager.setProvider(new Ext.state.CookieProvider());
+	
+	// create the data store
+    __extJSRichfaces.store = new Ext.data.ArrayStore({
+        fields: [
+           {name: 'accntNumber', type: 'int'},
+           {name: 'accntName'}
+        ],
+        idIndex: 0 //the column that would have unique values
+    });
+
+ 	__extJSRichfaces.processJSON = function (data) {
+
+  		var jsonObj = null;
+
+		if (data)
+			jsonObj = data.parseJSON (); 
+  		
+  		if (jsonObj) {
+
+			// load data and if already data is present in the store then append to it
+			__extJSRichfaces.store.loadData(jsonObj, true);
+
+			//destroy the child element ie. the grid of div before populating it again
+			Ext.destroy (Ext.ComponentMgr.get ('grid'));
+			
+			// create the Grid
+		    var grid = new Ext.grid.GridPanel({
+		        store: __extJSRichfaces.store,
+		        columns: [
+		            {id:'accntNumber', header: 'Account Number', width:250, sortable: true, dataIndex: 'accntNumber'},
+		            {header: 'Account Name', sortable: true, width:250, dataIndex: 'accntName'}
+		        ],
+		        stripeRows: true,
+		        autoExpandColumn: 'accntNumber',
+				height: 400,
+		        width: 500,
+		        title: 'extJS GridPanel',
+		        // This will help to maintain the user preference of the grid 
+		        // as it was in the last view of the page.
+		        stateful: true,
+		        stateId: 'grid',
+		        id: 'grid',
+		        sm: new Ext.grid.RowSelectionModel({singleSelect:true}),
+		    	that : this
+			});
+
+			grid.addListener (
+					'click',
+					function () {
+
+						if (this.selModel) {
+							if (this.selModel.getSelected) {
+								if (this.selModel.getSelected())
+									this.that.callToJSFBackingBean (this.selModel.getSelected().data);
+							}
+						}	
+					},
+					grid
+			);
+		    	    
+		    // render the grid to the specified div in the page
+		    grid.render('grid-example');
+		}		
+	}
+
+ 	__extJSRichfaces.callToJSFBackingBean = function (obj) {
+		
+ 		updateAccountRow (obj['accntNumber'], obj['accntName']);
+ 	} 
+
+ 	__extJSRichfaces.highlightRow = function (objStr) {
+
+		var obj = Ext.decode (objStr);
+		var el1 = document.getElementById ('form1:richfacesTable:'+(obj['param1']-1)+':col1');
+		var el2 = document.getElementById ('form1:richfacesTable:'+(obj['param1']-1)+':col2');
+
+		if (el1) {
+			el1.className = el1.className + ' cellhighlight';
+			el1.className.replace ('activitycell', '');
+		}
+		if (el2){
+			el2.className = el2.className + ' cellhighlight';
+			el2.className.replace ('activitycell', '');
+		}
+ 	}
+ 	
+  </script>
+  </head>
+  <body>
+  <a4j:keepAlive beanName="extJSRichfaces" />
+  <a4j:form id="form1">
+	<rich:dataTable width="500px" id="richfacesTable" 
+		cellspacing="0px" value="#{extJSRichfaces.accounts}" var="account" >
+		
+		 <f:facet name="header">
+             <rich:columnGroup>
+             	<rich:column colspan="2">
+                     <h:outputText value="Richfaces DataTable" />
+                 </rich:column>
+                 <rich:column breakBefore="true">
+                     <h:outputText value="Account Number" />
+                 </rich:column>
+                 <rich:column>
+                     <h:outputText value="Account Name" />
+                 </rich:column>
+             </rich:columnGroup>
+         </f:facet>
+         
+         <rich:column styleClass="activitycell" id="col1">
+            <a4j:commandLink value="#{account.accountNumber}"
+            	data="#{extJSRichfaces.jsonData}"
+            	actionListener="#{extJSRichfaces.accNumClickListener}"
+            	oncomplete="__extJSRichfaces.processJSON(data);"
+            	>
+             		<f:setPropertyActionListener
+						value="#{account}"
+						target="#{extJSRichfaces.selectedAccount}" />
+             </a4j:commandLink>
+         </rich:column>
+                    
+         <rich:column styleClass="activitycell" id="col2">
+            <h:outputText value="#{account.accountName}" />
+         </rich:column>           
+	</rich:dataTable>
+	<a4j:jsFunction name="updateAccountRow"   reRender="richfacesTable" 
+		data="{param1: '#{extJSRichfaces.selAccountNumber}' , param2 : '#{extJSRichfaces.selAccountName}'}"
+		oncomplete="__extJSRichfaces.highlightRow (data);"	>
+		<a4j:actionparam  name="param1" assignTo="#{extJSRichfaces.selAccountNumber}" />
+		<a4j:actionparam name="param2" assignTo="#{extJSRichfaces.selAccountName}" />
+	</a4j:jsFunction>  
+  </a4j:form>	
+  <br/><br/><br/><br/><br/><br/>
+  <div id="grid-example"></div>
+  </body>
+</html>
